@@ -1,0 +1,481 @@
+<!---
+Copyright (c) 2008 Eric Simmerman, Tempest Strings Enterprises, Inc. (tempeststrings.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<!--
+    @access public
+    @affects mathmlview
+    @topic LFC
+    @subtopic Views
+  -->
+<library>
+<include href="core.lzx"/>
+<include href="layout.lzx"/>
+<include href="script.lzx"/>
+<include href="token.lzx"/>
+<include href="operators.lzx"/>
+<include href="/extensions/drawview.lzx"/>
+
+<class name="mathmlview" extends="drawview">
+
+    <attribute name="inlineText" type="string" />
+
+    <attribute name="wrapContent" type="boolean" value="true"/>
+
+    <method name="init"><![CDATA[
+        super.init();
+        //Debug.write("Inside the mathmlview init");
+        if(this.inlineText != undefined && this.inlineText != null){
+	        this.parseInlineFormulas();
+        }
+    ]]></method>
+
+
+<!-- Can not pull data from an attribute (since an attribute could not hold a math tag) -->
+    <handler name="ondata" args="d"><![CDATA[
+        var dpath = this.datapath.dupePointer();
+        dpath.selectChild();
+        var namespace = dpath.getNodeName();
+        Debug.write("Namespace: "+namespace);
+        if("math"==namespace){
+            var rootBox = loadNode(dpath);
+            var style = new Style();
+            var origin = new Point(0,0);
+
+            //For some reason the font attribute and style are private?
+            //Can't access them here for some reason.
+            //style.font = this['font'];
+            //style.fontstyle = this['fontstyle'];
+
+            style.size = this.fontsize;
+            style.color = this.fgcolor+"";
+            DrawFormula.draw(this, rootBox, origin, style);
+
+            _autoAdjustDimensions();
+        }else{
+	        dpath.selectParent();
+            this.setAttribute('inlineText',dpath.getNodeText());
+        }
+    ]]></handler>
+
+    <handler name="oninlineText"><![CDATA[
+    	if(this.isinited && this.inlineText != null){
+	        this.parseInlineFormulas();
+	    }
+    ]]></handler>
+    <handler name="onfontsize"><![CDATA[
+    	//Debug.write("Insize onfontsize of mathmlview");
+    	if(this.isinited && this.visible){
+	        this.parseInlineFormulas();
+	    }
+    ]]></handler>
+
+    <method name="clear"><![CDATA[
+        super.clear();
+		while(this.subviews.length > 0){
+            this.subviews[0].setAttribute('visible',false);
+            this.subviews[0].destroy();
+		}
+    ]]></method>
+
+    <method name="_renderText" args="renderText, lastElementBounds"><![CDATA[
+		    //Debug.write("RenderText "+renderText);
+		    //Debug.write("Original Positiong "+lastElementBounds);
+		    var parts = renderText.split("<br/>");
+		    if(parts.length > 1){
+		    	//Determine line height
+		    	var heightView = new LzText(null, {text:"X", visible:false, fontsize:this.fontsize});
+		    	var lineHeight = heightView.getTextHeight();
+		    	heightView.destroy();
+
+		    	for(var p=0; p<parts.length; p++){
+			    	renderText = parts[p];
+			    	if(renderText != "") {
+				    	lastElementBounds = _renderTextWithoutBreaks(renderText, lastElementBounds);
+				    }
+				    if( (p+1) < parts.length ) { //Not the last part
+				    	// Manipulate lastElementBounds to force a "newline"
+			            lastElementBounds.x = 0;
+			            lastElementBounds.width = 0;
+				        lastElementBounds.y = lastElementBounds.y + lastElementBounds.height + lineHeight;
+			    	    lastElementBounds.height = 0;
+			    	}
+		    	}
+		    }else{
+		    	lastElementBounds = _renderTextWithoutBreaks(renderText, lastElementBounds);
+		    }
+		    //Debug.write("Returning Positiong "+lastElementBounds);
+			return lastElementBounds;
+    ]]></method>
+
+    <method name="_renderTextWithoutBreaks" args="renderText, lastElementBounds"><![CDATA[
+		    var textView = new LzText(this, {x:(lastElementBounds.x+lastElementBounds.width), y:lastElementBounds.y, text:renderText, resize:true});
+			var textBounds = new Rectangle(textView.x,textView.y,textView.getTextWidth(),textView.getTextHeight());
+		    //Debug.write("Set textBounds using textView: "+textBounds.toString());
+
+		    if( wrapContent && (textView.x + textView.getTextWidth()) > this.parent.width){//Text is cutoff so wrap it
+		       textView.setAttribute('visible',false);
+		       if( textView.x > 0 ){
+		           //Debug.write("move text down one line since it is clipped");
+		           textView.x = 0;
+		           textView.y = textBounds.y + textBounds.height;
+		       }
+		       var wrappingTextView = new LzText(this, {x:textView.x, y:textView.y, text:textView.text, multiline:true});
+			   var desiredWidth = wrappingTextView.getTextWidth() * 1.01;
+				if(desiredWidth > this.parent.width){ //Even at x=0 text is still too wide, so manually adjust the width and force a multiline wrap
+					desiredWidth = this.parent.width;
+				}
+				wrappingTextView.setWidth(desiredWidth);
+
+		       textBounds = new Rectangle(wrappingTextView.x,wrappingTextView.y,desiredWidth,wrappingTextView.getTextHeight());
+		       textView.destroy();
+		    }
+			return textBounds;
+    ]]></method>
+
+    <method name="parseInlineFormulas"><![CDATA[
+            if(this.inlineText == null) return;
+            this.clear();
+            if( this.inlineText.length <= 0) return;
+            //Debug.write("Inside parseInlineFormulas ... ["+this.inlineText+"]");
+
+            var style = new Style();
+            style.size = this.fontsize;
+            style.color = this.fgcolor+"";
+            var lastElementBounds = new Rectangle(0,0,0,0);
+
+			var renderText = null;
+            var renderTextIndex = 0;
+            var mathIndex = this.inlineText.indexOf("<math");
+             while( mathIndex > -1){
+                 var endMathIndex = this.inlineText.indexOf("</math",mathIndex);
+
+                 if(mathIndex > renderTextIndex) { //we have some inline text to display
+                     renderText = this.inlineText.substring(renderTextIndex,mathIndex);
+                     lastElementBounds = _renderText(renderText, lastElementBounds);
+                 }
+                 //Debug.write("LastElementBounds "+lastElementBounds.toString());
+
+                 var formula = this.inlineText.substring(mathIndex,endMathIndex);
+                 //Parse the MathML formula by first converting it to a Dataset with a pointer
+                 var ds = new LzDataset();
+                 ds.appendChild(LzDataNode.stringToLzData(formula));
+                 var mathPointer = ds.getPointer();
+                 mathPointer.selectChild();
+                 var rootBox = loadNode(mathPointer);
+                 rootBox.inheritStyle(style);
+
+                 var formulaOrigin = new Point(lastElementBounds.x+lastElementBounds.width , lastElementBounds.y);
+                 rootBox.calculateBox(formulaOrigin, 0, 0);
+                 //Debug.write("Bounds of the estimated box: "+rootBox.toString());
+                 if( wrapContent && (formulaOrigin.x + rootBox.finalBounds.width) > this.parent.width){
+                 	//Debug.write("the formula relative width of "+formulaOrigin.x +" "+ rootBox.finalBounds.width+" will exceed our width of "+this.parent.width);
+                     formulaOrigin.x = 0;
+                     formulaOrigin.y = lastElementBounds.y + lastElementBounds.height + rootBox.finalBounds.height/2.0;
+                     lastElementBounds.y = formulaOrigin.y;
+                 }else if( rootBox.finalBounds.y < formulaOrigin.y){ //the formula placement will exceed the line height
+                    var newStyle = style.getCopy();
+                    var theDiff = rootBox.finalBounds.y - formulaOrigin.y;
+                    newStyle.size = newStyle.size + ( theDiff/4);
+                    //Debug.write("HACK: Attempt to fit formula to height of line by reducing fontsize to "+newStyle.size);
+                    rootBox.overrideStyle(newStyle);
+                    formulaOrigin.y = formulaOrigin.y - (theDiff/3);
+                 }
+                 var formulaOffsets = DrawFormula.draw(this, rootBox, formulaOrigin, style);
+                 lastElementBounds = new Rectangle(formulaOrigin.x,lastElementBounds.y,formulaOffsets.width,formulaOffsets.height);
+
+				 ds.destroy();
+				 mathPointer.destroy();
+				 rootBox = null;
+                 renderTextIndex = endMathIndex+7;
+                 mathIndex = this.inlineText.indexOf("<math",endMathIndex);
+             }
+            renderText = this.inlineText.substring(renderTextIndex);
+            if(renderText != null && renderText != ""){
+				lastElementBounds = _renderText(renderText, lastElementBounds);
+			}
+
+			_autoAdjustDimensions();
+    ]]></method>
+
+	<method name="_autoAdjustDimensions"><![CDATA[
+			var vmaxx = 0;
+			var vmaxy = 0;
+			var yoffset = 0; //to handle negative y values
+			for(var i=0; i < this.subviews.length; i++) {
+	            var maxx = this.subviews[i].x + this.subviews[i].width;
+	            if(this.subviews[i].y < 0 && Math.abs(this.subviews[i].y) > yoffset ){
+		            yoffset = Math.abs(this.subviews[i].y);
+	            }
+	            var maxy = this.subviews[i].y + this.subviews[i].height;
+	            if( this.subviews[i] instanceof LzText){
+		            if(!this.subviews[i].multiline) {
+			            maxx = this.subviews[i].x + this.subviews[i].getTextWidth();
+			        }
+		            maxy = this.subviews[i].y + this.subviews[i].getTextHeight();
+	            }
+	            if( maxx > vmaxx){
+	            	vmaxx = maxx;
+	            }
+	            if( maxy > vmaxy){
+	            	vmaxy = maxy;
+	            }
+			}
+			this.setWidth(vmaxx*1.05);
+			this.setHeight(vmaxy + yoffset);
+			//Debug.write("Setting w,h of mathml block ("+this.name+") as: "+this.width+","+this.height);
+	]]></method>
+
+    <method name="loadNode" args="node">
+        var box;
+        var name:String = node.getNodeName();
+        //Debug.write("Loading a "+name);
+//TODO: need support for mline for repeating decimals http://www.w3.org/TR/MathML3/chapter3.html#presm.mline
+        if(name=='mrow' || name=='math'){
+            box = loadMrow(node);
+        }else if(name=='mfenced'){
+            box = loadMfenced(node);
+        }else if(name=='mfrac'){
+            box = loadMfrac(node);
+        }else if(name=='msqrt'){
+            box = loadMSqrt(node);
+        }else if(name=='mroot'){
+            box = loadMRoot(node);
+        }else if(name=='mover'){
+            box = loadMOver(node);
+        }else if(name=='msup'){
+            box = loadMSup(node);
+        }else if(name=='munder'){
+            box = loadMUnder(node);
+        }else if(name=='msub'){
+            box = loadMSub(node);
+        }else if(name=='msubsup'){
+            box = loadMSubSup(node);
+        }else if(name=='munderover'){
+            box = loadMUnderOver(node);
+        }else if(name=='mi'){
+            box = loadMi(node);
+        }else if(name=='mn'){
+            box = loadMn(node);
+        }else if(name=='mo'){
+            box = loadMo(node);
+        }else if(name=='mtext'){
+            box = loadMtext(node);
+        }
+        var attrs = node.getNodeAttributes();
+        if(attrs!=null){
+            loadAttributes(attrs, box);
+        }
+        return box;
+    </method>
+
+    <method name="lineStyle" args="linethickness, color, alpha">
+        this.strokeStyle = color;
+        this.lineWidth=linethickness;
+        this.globalAlpha=alpha;
+    </method>
+
+    <method name="loadAttributes" args="attributes,box">
+        if(attributes["color"]!=null){
+            box.style.color = attributes["color"];
+        }
+        if(attributes["fontstyle"]!=null){
+            box.style.fontstyle = attributes["fontstyle"];
+        }
+        if(attributes["fontsize"]!=null){
+            box.style.size = parseInt(attributes["fontsize"]);
+        }
+        if(attributes["fontfamily"]!=null){
+            box.style.font = attributes["fontfamily"];
+        }
+    </method>
+
+    <method name="loadMrow" args="node">
+     //Debug.write("Inside loadMrow");
+        var nodeBox:RowBox = new RowBox();
+
+        if(node.selectChild()){
+            do{
+                var child:Box = loadNode(node.dupePointer());
+                //Debug.write("Adding "+node.getNodeName()+" to the Mrow");
+                nodeBox.addChild(child);
+            }while(node.selectNext())
+        }
+        return nodeBox;
+
+    </method>
+
+    <method name="loadMfenced" args="node"><![CDATA[
+        var nodeBox:FencedBox = new FencedBox();
+        if(node.selectChild()){
+            do{
+                var child:Box = loadNode(node.dupePointer());
+                nodeBox.addChild(child);
+            }while(node.selectNext())
+        }
+        var attributes = node.getNodeAttributes();
+        if(attributes["linethickness"]!=null){
+            nodeBox.linethickness = parseInt(attributes["linethickness"]);
+        }
+        if(attributes["open"]!=null){
+            nodeBox.open = attributes["open"];
+        }
+        if(attributes["close"]!=null){
+            nodeBox.close = attributes["close"];
+        }
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMfrac" args="node"><![CDATA[
+        var nodeBox:FracBox = new FracBox();
+        var attributes = node.getNodeAttributes();
+        if(attributes["linethickness"]!=null){
+            nodeBox.linethickness = parseInt(attributes["linethickness"]);
+        }
+        if(attributes["bevelled"]!=null){
+            nodeBox.bevelled = attributes["bevelled"];
+        }
+        node.selectChild();
+        var numNode = loadNode(node.dupePointer());
+        nodeBox.num = numNode;
+
+        node.selectNext();
+        var denumNode = loadNode(node.dupePointer())
+        nodeBox.denum = denumNode;
+
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMSqrt" args="node"><![CDATA[
+        var nodeBox:SqrtBox = new SqrtBox();
+        if(node.selectChild()){
+            do{
+                var child:Box = loadNode(node.dupePointer());
+                //Debug.write("Adding "+node.getNodeName()+" to the Msqrt");
+                nodeBox.addChild(child);
+            }while(node.selectNext())
+        }
+        var attributes = node.getNodeAttributes();
+        if(attributes["linethickness"]!=null){
+            nodeBox.linethickness = parseInt(attributes["linethickness"]);
+        }
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMRoot" args="node"><![CDATA[
+        var nodeBox:RootBox = new RootBox();
+        node.selectChild();
+        var baseNode = loadNode(node.dupePointer());
+        nodeBox.base = baseNode;
+        node.selectNext();
+        var expNode = loadNode(node.dupePointer())
+        nodeBox.index = expNode;
+        var attributes = node.getNodeAttributes();
+        if(attributes["linethickness"]!=null){
+            nodeBox.linethickness = parseInt(attributes["linethickness"]);
+        }
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMSup" args="node"><![CDATA[
+        var nodeBox:SupBox = new SupBox();
+        node.selectChild();     var baseNode = loadNode(node.dupePointer());
+        nodeBox.base = baseNode;
+        node.selectNext();      var expNode = loadNode(node.dupePointer());
+        nodeBox.exp = expNode;
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMOver" args="node"><![CDATA[
+        var nodeBox:OverBox = new OverBox();
+        node.selectChild();     var baseNode = loadNode(node.dupePointer());
+        nodeBox.base = baseNode;
+        node.selectNext();      var expNode = loadNode(node.dupePointer());
+        nodeBox.exp = expNode;
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMSub" args="node"><![CDATA[
+        var nodeBox:SubBox = new SubBox();
+        node.selectChild();     var baseNode = loadNode(node.dupePointer());
+        nodeBox.base = baseNode;
+        node.selectNext();      var expNode = loadNode(node.dupePointer());
+        nodeBox.sub = expNode;
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMUnder" args="node"><![CDATA[
+        var nodeBox:UnderBox = new UnderBox();
+        node.selectChild();     var baseNode = loadNode(node.dupePointer());
+        nodeBox.base = baseNode;
+        node.selectNext();      var expNode = loadNode(node.dupePointer());
+        nodeBox.sub = expNode;
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMSubSup" args="node"><![CDATA[
+        var nodeBox:SubSupBox = new SubSupBox();
+        node.selectChild();     var baseNode = loadNode(node.dupePointer());
+        nodeBox.base = baseNode;
+        node.selectNext();      var subNode = loadNode(node.dupePointer());
+        nodeBox.sub = subNode;
+        node.selectNext();      var expNode = loadNode(node.dupePointer());
+        nodeBox.exp = expNode;
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMUnderOver" args="node"><![CDATA[
+        var nodeBox:UnderOverBox = new UnderOverBox();
+        node.selectChild();     var baseNode = loadNode(node.dupePointer());
+        nodeBox.base = baseNode;
+        node.selectNext();      var subNode = loadNode(node.dupePointer());
+        nodeBox.sub = subNode;
+        node.selectNext();      var expNode = loadNode(node.dupePointer());
+        nodeBox.exp = expNode;
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMi" args="node"><![CDATA[
+        var nodeBox:IBox = new IBox();
+        nodeBox.text = node.getNodeText();
+        //Debug.write("Setting Mi text to "+nodeBox.text);
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMo" args="node"><![CDATA[
+        return OBox.getOBox(node.getNodeText());
+    ]]></method>
+
+    <method name="loadMtext" args="node"><![CDATA[
+        var nodeBox:TBox = new TBox();
+        nodeBox.text = node.getNodeText();
+        return nodeBox;
+    ]]></method>
+
+    <method name="loadMn" args="node"><![CDATA[
+        var nodeBox:NBox = new NBox();
+        nodeBox.number = node.getNodeText();
+        return nodeBox;
+    ]]></method>
+
+</class>
+
+
+</library>

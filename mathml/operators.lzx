@@ -1,0 +1,210 @@
+<!---
+Copyright (c) 2008 Eric Simmerman, Tempest Strings Enterprises, Inc. (tempeststrings.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<library>
+<script when='immediate'>
+<![CDATA[
+class SumOBox extends OBox{
+
+    var addSize:Number = 3;
+    var w:Number = 20/45;
+    var l:Number = 2/45;
+    var h:Number = 3/45;
+
+    public function SumOBox(){
+        super();
+        this.text = "";
+    }
+
+    public function draw(graph){
+        var h1 = FontConstant.getHeight(this.style, "X");
+        graph.beginPath();
+        graph.lineStyle(this.l*h1, this.getHexColor(), 100);
+        graph.moveTo(this.finalBounds.x+this.w*h1, this.finalBounds.y+7 + this.h*h1);
+        graph.lineTo(this.finalBounds.x+this.w*h1-3, this.finalBounds.y+4 + this.h*h1);
+        graph.lineTo(this.finalBounds.x, this.finalBounds.y+4 + this.h*h1);
+        graph.lineTo(this.finalBounds.x+(this.w*h1)/2, this.finalBounds.y+h1/2);
+        graph.lineTo(this.finalBounds.x, this.finalBounds.y + h1 -3 - this.h*h1);
+        graph.lineTo(this.finalBounds.x+this.w*h1-3, this.finalBounds.y +h1-3 - this.h*h1);
+        graph.lineTo(this.finalBounds.x+this.w*h1, this.finalBounds.y +h1-6 - this.h*h1);
+        graph.stroke();
+
+    }
+
+    public function calculate(){
+        DrawFormula.calculateText(this.finalBounds, this.text, this.style);
+        var h1 = FontConstant.getHeight(this.style, "X");
+
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-this.addSize;
+        var h2 = FontConstant.getHeight(newStyle, "X");
+
+        this.originPoint.y = this.originPoint.y - (h1-h2)/2;
+        this.finalBounds.y = this.finalBounds.y - (h1-h2)/2;
+        this.finalBounds.width=this.w*h1;
+        this.finalBounds.height=h1;
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+        this.style.size = this.style.size + this.addSize;
+    }
+
+}
+
+class RArrOBox extends OBox{
+
+    public function RArrOBox(){
+        super();
+        this.text = "";
+    }
+
+    public function draw(graph){
+        graph.beginPath();
+        graph.lineStyle(1, this.getHexColor(), 100);
+        graph.moveTo(this.finalBounds.x+1, this.finalBounds.y + this.finalBounds.height/2);
+        graph.lineTo(this.finalBounds.x+this.finalBounds.width-1, this.finalBounds.y + this.finalBounds.height/2);
+        graph.lineTo(this.finalBounds.x+this.finalBounds.width-6, this.finalBounds.y + this.finalBounds.height/2-3);
+        graph.moveTo(this.finalBounds.x+this.finalBounds.width-1, this.finalBounds.y + this.finalBounds.height/2);
+        graph.lineTo(this.finalBounds.x+this.finalBounds.width-6, this.finalBounds.y + this.finalBounds.height/2+3);
+        graph.stroke();
+    }
+
+    public function calculate(){
+        DrawFormula.calculateText(this.finalBounds, this.text, this.style);
+        var h1 = FontConstant.getHeight(this.style, "X");
+        var w1 = FontConstant.getWidth(this.style, "X");
+
+        this.finalBounds.width=1.5*w1;
+        this.finalBounds.height=h1;
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+    }
+
+}
+
+class ProdOBox extends OBox{
+
+    var addSize:Number = 4;
+    var w:Number = 30/45;
+    var l:Number = 2/45;
+    var h:Number = 10/45;
+
+    public function ProdOBox(){
+        super();
+        this.text = "";
+    }
+
+    public function draw(graph){
+        var h1 = FontConstant.getHeight(this.style, "X");
+        graph.beginPath();
+        graph.lineStyle(this.l*h1 +1, this.getHexColor(), 100);
+        graph.moveTo(this.finalBounds.x+this.w*h1, this.finalBounds.y + this.h*h1);
+        graph.lineTo(this.finalBounds.x, this.finalBounds.y + this.h*h1);
+        graph.moveTo(this.finalBounds.x+ this.w*h1/5, this.finalBounds.y + this.h*h1);
+        graph.lineTo(this.finalBounds.x+ this.w*h1/5, this.finalBounds.y - this.h*h1/2 + h1);
+        graph.moveTo(this.finalBounds.x + this.w*h1 - this.w*h1/5, this.finalBounds.y + this.h*h1);
+        graph.lineTo(this.finalBounds.x + this.w*h1 - this.w*h1/5, this.finalBounds.y - this.h*h1/2 + h1);
+        graph.stroke();
+    }
+
+    public function calculate(){
+        DrawFormula.calculateText(this.finalBounds, this.text, this.style);
+        var h1 = FontConstant.getHeight(this.style, "X");
+
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-this.addSize;
+        var h2 = FontConstant.getHeight(newStyle, "X");
+
+        this.originPoint.y = this.originPoint.y - (h1-h2)/2;
+        this.finalBounds.y = this.finalBounds.y - (h1-h2)/2;
+        this.finalBounds.width=this.w*h1;
+        this.finalBounds.height=h1;
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+        this.style.size = this.style.size + this.addSize;
+    }
+
+}
+
+class IntOBox extends OBox{
+
+    var addSize:Number = 8;
+    var k:Number = 12/45;
+    var r:Number = 2/45;
+    var l:Number = 1/45;
+    var m:Number = 5/45;
+
+
+    //integral sign = \u222B
+    public function IntOBox(){
+        super();
+        this.text = "";
+    }
+
+
+    public function draw(graph){
+        var h1 = FontConstant.getHeight(this.style, "X");
+        graph.beginPath();
+        graph.lineStyle(this.l*h1, this.getHexColor(), 100);
+        graph.moveTo(this.finalBounds.x+this.k*h1, this.finalBounds.y+this.m*h1+this.r*h1);
+        graph.quadraticCurveTo(this.finalBounds.x+this.k*h1-this.r*h1, this.finalBounds.y+this.m*h1,this.finalBounds.x+this.k*h1-2*this.r*h1, this.finalBounds.y+this.m*h1+this.r*h1);
+
+        graph.lineStyle(this.l*h1, this.getHexColor(), 100);
+        graph.moveTo(this.finalBounds.x+this.k*h1-2*this.r*h1, this.finalBounds.y+this.m*h1+this.r*h1);
+        graph.quadraticCurveTo(this.finalBounds.x+this.k*h1/2-this.l*h1, this.finalBounds.y+h1/2,this.finalBounds.x+2*this.r*h1, this.finalBounds.y+h1-this.m*h1-this.r*h1);
+        graph.moveTo(this.finalBounds.x+this.k*h1-2*this.r*h1, this.finalBounds.y+this.m*h1+this.r*h1);
+        graph.quadraticCurveTo(this.finalBounds.x+this.k*h1/2+this.l*h1, this.finalBounds.y+h1/2,this.finalBounds.x+2*this.r*h1, this.finalBounds.y+h1-this.m*h1-this.r*h1);
+
+        //graph.lineTo(this.finalBounds.x+2*this.r*h1, this.finalBounds.y+h1-this.m*h1-this.r*h1);
+
+        graph.lineStyle(this.l*h1, this.getHexColor(), 100);
+        graph.moveTo(this.finalBounds.x, this.finalBounds.y+h1-this.m*h1-this.r*h1);
+        graph.quadraticCurveTo(this.finalBounds.x+this.r*h1, this.finalBounds.y+h1-this.m*h1,this.finalBounds.x+2*this.r*h1, this.finalBounds.y+h1-this.m*h1-this.r*h1);
+        graph.stroke();
+    }
+
+    public function calculate(){
+        DrawFormula.calculateText(this.finalBounds, this.text, this.style);
+        var h1 = FontConstant.getHeight(this.style, "X");
+
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-this.addSize;
+        var h2 = FontConstant.getHeight(newStyle, "X");
+        this.originPoint.y = this.originPoint.y - (h1-h2)/2;
+        this.finalBounds.y = this.finalBounds.y - (h1-h2)/2;
+        this.finalBounds.width=this.k*h1;
+        this.finalBounds.height=h1;
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+        this.style.size = this.style.size + this.addSize;
+    }
+
+}
+]]>
+</script>
+</library>

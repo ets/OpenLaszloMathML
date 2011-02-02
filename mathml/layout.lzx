@@ -1,0 +1,490 @@
+<!---
+Copyright (c) 2008 Eric Simmerman, Tempest Strings Enterprises, Inc. (tempeststrings.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<library>
+<script when='immediate'>
+<![CDATA[
+class RowBox extends Box{
+
+    var children:Array = null;
+
+    public function RowBox(){
+        super();
+        this.children = new Array();
+    }
+
+    public function addChild(newBox:Box){
+        this.children[this.children.length] = newBox;
+    }
+
+    public function draw(graph){
+        for(var i:Number =0; i<this.children.length;i++){
+                var child:Box = this.children[i];
+                child.drawBox(graph);
+        }
+    }
+
+    public function calculate(){
+        for(var i:Number =0; i<this.children.length;i++){
+                var child:Box = this.children[i];
+
+                var cP = new Point();
+                cP.x = this.originPoint.x + this.finalBounds.width;
+                cP.y = this.originPoint.y;
+
+                child.calculateBox(cP, this.topLimit, this.bottomLimit);
+
+                this.finalBounds.width = this.finalBounds.width + child.finalBounds.width;
+
+                if(child.finalBounds.y<this.finalBounds.y){
+                        this.finalBounds.height = this.finalBounds.y + this.finalBounds.height - child.finalBounds.y;
+                        this.finalBounds.y = child.finalBounds.y;
+                }
+                if((child.finalBounds.y + child.finalBounds.height)>(this.finalBounds.y + this.finalBounds.height)){
+                    this.finalBounds.height=child.finalBounds.y + child.finalBounds.height - this.finalBounds.y;
+                }
+        }
+
+    }
+
+    public function addXToChildren(addX:Number){
+        for(var i:Number =0; i<this.children.length;i++){
+                var child:Box = this.children[i];
+                child.addXToBox(addX);
+        }
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        //Debug.write("Inside RowBox inheritStyle");
+        super.inheritStyle(_styleParent);
+
+        for(var i:Number=0; i<this.children.length;i++){
+                //Debug.write("Copying the parentStyle of child "+i+"/"+this.children.length);
+                this.children[i].inheritStyle(this.style);
+        }
+
+    }
+
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+        for(var i:Number=0; i<this.children.length;i++){
+                this.children[i].overrideStyle(this.style);
+        }
+    }
+}
+
+class SqrtBox extends RowBox{
+
+    var linethickness = 1;
+
+    public function SqrtBox(){
+        super();
+    }
+
+    public function draw(graph){
+        super.draw(graph);
+
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        Debug.write("Drawing the sqrt wtih "+newStyle.toString());
+
+        var d = FontConstant.getHeight(newStyle, "X")/2;
+        Debug.write("d="+d);
+        graph.lineStyle(this.linethickness, newStyle.getHexColor(), 100);
+
+        graph.beginPath();
+        graph.moveTo(this.finalBounds.x, this.finalBounds.y+ d);
+        graph.lineTo(this.finalBounds.x + (d/2), this.finalBounds.y + this.finalBounds.height);
+        graph.lineTo(this.finalBounds.x + d, this.finalBounds.y+1);
+        graph.lineTo(this.finalBounds.x + this.finalBounds.width, this.finalBounds.y+1);
+        graph.stroke();
+
+        //DrawFormula.drawRectangle(graph, this.finalBounds);
+    }
+
+    public function calculate(){
+        super.calculate();
+
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        var d = FontConstant.getHeight(newStyle, "X")/2;
+
+        for(var i:Number =0; i<this.children.length;i++){
+                var child:Box = this.children[i];
+                child.addXToBox(d);
+        }
+
+        this.finalBounds.width = this.finalBounds.width + d;
+        this.finalBounds.height = this.finalBounds.height + 3
+        this.finalBounds.y = this.finalBounds.y - 3
+    }
+
+    public function addXToChildren(addX:Number){
+        super.addXToChildren(addX);
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+    }
+
+
+}
+
+class FencedBox extends RowBox{
+
+    var linethickness = 1;
+
+    // accepted char: () [] {} | &langle; &rangle; &lceil;&rceil;  &lfloor; &rfloor; &Verbar;
+    var open = "(";
+    var close = ")";
+    var lfw = 10;
+    var rfw = 10;
+
+    public function FencedBox(){
+        super();
+    }
+
+
+    public function draw(graph){
+        super.draw(graph);
+
+        graph.lineStyle(this.linethickness, this.getHexColor(), 100);
+        this.drawFence(graph, 0, this.open, this.lfw);
+        this.drawFence(graph, this.finalBounds.width -this.rfw, this.close, this.rfw);
+    }
+
+    function drawFence(graph, x:Number, sign:String, fw){
+        graph.beginPath();
+        if(sign=="["){
+            graph.moveTo(x+this.finalBounds.x+fw, this.finalBounds.y+1);
+            graph.lineTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+            graph.lineTo(x+this.finalBounds.x+fw, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="]"){
+            graph.moveTo(x+this.finalBounds.x, this.finalBounds.y+1);
+            graph.lineTo(x+this.finalBounds.x+2*fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+2*fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+            graph.lineTo(x+this.finalBounds.x, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="|"){
+            graph.moveTo(x+this.finalBounds.x+fw/2, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+fw/2, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="{"){
+            graph.moveTo(x+this.finalBounds.x+4*fw/5, this.finalBounds.y + 1);
+            graph.quadraticCurveTo(x+this.finalBounds.x+2*fw/5, this.finalBounds.y + 1,x+this.finalBounds.x+2*fw/5, this.finalBounds.y+this.finalBounds.height/4);
+            graph.quadraticCurveTo(x+this.finalBounds.x+2*fw/5, this.finalBounds.y+this.finalBounds.height/2-2,x+this.finalBounds.x, this.finalBounds.y+this.finalBounds.height/2);
+            graph.quadraticCurveTo(x+this.finalBounds.x+2*fw/5, this.finalBounds.y+this.finalBounds.height/2+2, x+this.finalBounds.x+2*fw/5, this.finalBounds.y+3*this.finalBounds.height/4);
+            graph.quadraticCurveTo(x+this.finalBounds.x+2*fw/5, this.finalBounds.y+this.finalBounds.height -1,x+this.finalBounds.x+4*fw/5, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="}"){
+            graph.moveTo(x+this.finalBounds.x +1*fw/5, this.finalBounds.y + 1);
+            graph.quadraticCurveTo(x+this.finalBounds.x +3*fw/5, this.finalBounds.y + 1,x+this.finalBounds.x +3*fw/5, this.finalBounds.y+this.finalBounds.height/4);
+            graph.quadraticCurveTo(x+this.finalBounds.x +3*fw/5, this.finalBounds.y+this.finalBounds.height/2-2,x+this.finalBounds.x +fw, this.finalBounds.y+this.finalBounds.height/2);
+            graph.quadraticCurveTo(x+this.finalBounds.x +3*fw/5, this.finalBounds.y+this.finalBounds.height/2+2, x+this.finalBounds.x+3*fw/5, this.finalBounds.y+3*this.finalBounds.height/4);
+            graph.quadraticCurveTo(x+this.finalBounds.x +3*fw/5, this.finalBounds.y+this.finalBounds.height -1,x+this.finalBounds.x+1*fw/5, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="&langle;"){
+            graph.moveTo(x+this.finalBounds.x+4*fw/5, this.finalBounds.y+1);
+            graph.lineTo(x+this.finalBounds.x, this.finalBounds.y + this.finalBounds.height/2);
+            graph.lineTo(x+this.finalBounds.x+4*fw/5, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="&rangle;"){
+            graph.moveTo(x+this.finalBounds.x +1*fw/5, this.finalBounds.y+1);
+            graph.lineTo(x+this.finalBounds.x +fw, this.finalBounds.y + this.finalBounds.height/2);
+            graph.lineTo(x+this.finalBounds.x +1*fw/5, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="&lceil;"){
+            graph.moveTo(x+this.finalBounds.x+fw, this.finalBounds.y+1);
+            graph.lineTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="&rceil;"){
+            graph.moveTo(x+this.finalBounds.x, this.finalBounds.y+1);
+            graph.lineTo(x+this.finalBounds.x+2*fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+2*fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="&lfloor;"){
+            graph.moveTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+            graph.lineTo(x+this.finalBounds.x+fw, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="&rfloor;"){
+            graph.moveTo(x+this.finalBounds.x +2*fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x +2*fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+            graph.lineTo(x+this.finalBounds.x , this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="&Verbar;"){
+            graph.moveTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+            graph.moveTo(x+this.finalBounds.x+2*fw/3, this.finalBounds.y + 1);
+            graph.lineTo(x+this.finalBounds.x+2*fw/3, this.finalBounds.y + this.finalBounds.height - 1);
+        }else if(sign=="("){
+            graph.moveTo(x+this.finalBounds.x+fw, this.finalBounds.y+1);
+            graph.quadraticCurveTo(x+this.finalBounds.x, this.finalBounds.y+this.finalBounds.height/2,this.finalBounds.x+fw, this.finalBounds.y+this.finalBounds.height-1);
+        }else if(sign==")"){
+            graph.moveTo(x+this.finalBounds.x, this.finalBounds.y+1);
+            graph.quadraticCurveTo(x+this.finalBounds.x+fw, this.finalBounds.y+this.finalBounds.height/2,x+this.finalBounds.x, this.finalBounds.y+this.finalBounds.height-1);
+        }
+        graph.stroke();
+    }
+
+    public function calculate(){
+        super.calculate();
+        this.calculateFenceWidth();
+        this.addXToChildren(this.lfw);
+        this.finalBounds.width = this.finalBounds.width + this.lfw+this.rfw;
+    }
+
+    function calculateFenceWidth(){
+        if(this.open==""){
+            this.lfw=1;
+        }else{
+            this.lfw = this.finalBounds.height/5;
+        }
+        if(this.close==""){
+            this.rfw=1;
+        }else{
+            this.rfw = this.finalBounds.height/5;
+        }
+    }
+
+    public function addXToChildren(addX:Number){
+        super.addXToChildren(addX);
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+    }
+
+
+}
+
+class FracBox extends Box{
+
+    var num:Box;
+    var denum:Box;
+    var linethickness = 1;
+    var bevelled = false;
+
+    public function draw(graph){
+        //Debug,write"draw fraction at " + this.originPoint + " format " + size);
+
+        this.num.drawBox(graph);
+        //draw line
+        graph.beginPath();
+        graph.lineStyle(this.linethickness, this.getHexColor(), 100);
+        if(this.bevelled){
+            graph.moveTo(this.num.finalBounds.x+this.num.finalBounds.width+10, this.num.finalBounds.y);
+            graph.lineTo(this.num.finalBounds.x+this.num.finalBounds.width, this.denum.finalBounds.y+this.denum.finalBounds.height);
+        }else{
+        	var xH = FontConstant.getHeight(this.style, "X");
+            graph.moveTo(this.originPoint.x, this.originPoint.y + (xH/2) + 1);
+            graph.lineTo(this.originPoint.x + this.finalBounds.width, this.originPoint.y + (xH/2) + 1);
+        }
+        graph.stroke();
+        this.denum.drawBox(graph);
+    }
+
+    public function calculate(){
+        if(this.bevelled){
+            this.calculateBevelled();
+        }else{
+            this.calculateNonBevelled();
+        }
+    }
+
+    public function calculateBevelled(){
+        var hText = FontConstant.getHeight(this.style, "X");
+
+        var expR = new Point();
+        expR.x = this.originPoint.x;
+        expR.y = this.originPoint.y - (hText/4);
+
+        var overY = 0;
+        do{
+            overY = this.num.calculateBox(expR, 0, this.originPoint.y + 3*(hText/4));
+            if(overY>0){
+                expR.y = expR.y - overY;
+            }
+        }while(overY>0);
+        this.finalBounds.x=this.num.finalBounds.x;
+        this.finalBounds.y=this.num.finalBounds.y;
+
+
+        var expDenum = new Point();
+        expDenum.x = this.originPoint.x + this.num.finalBounds.width + 10;
+        expDenum.y = this.originPoint.y + hText/4;
+        overY = 0;
+        do{
+            overY = this.denum.calculateBox(expDenum, this.originPoint.y + (hText/4), 0);
+            if(overY>0){
+                expDenum.y = expDenum.y + overY;
+            }
+        }while(overY>0);
+
+
+        this.finalBounds.height =this.denum.finalBounds.y + this.denum.finalBounds.height - this.num.finalBounds.y;
+        this.finalBounds.width = this.denum.finalBounds.x + this.denum.finalBounds.width - this.num.finalBounds.x;
+    }
+
+    public function calculateNonBevelled(){
+        var expR = new Point();
+        expR.x = this.originPoint.x;
+        expR.y = this.originPoint.y - (FontConstant.getHeight(this.style, "X")/2);
+
+        var overY = 0;
+        do{
+            overY = this.num.calculateBox(expR, 0, this.originPoint.y + (FontConstant.getHeight(this.style, "X")/2));
+            if(overY>0){
+                expR.y = expR.y - overY;
+            }
+        }while(overY>0);
+
+        this.finalBounds.x=this.num.finalBounds.x;
+        this.finalBounds.y=this.num.finalBounds.y;
+
+
+        var expDenum = new Point();
+        expDenum.x = this.originPoint.x;
+        expDenum.y = this.originPoint.y + FontConstant.getHeight(this.style, "X")/2;
+
+        overY = 0;
+        do{
+            overY = this.denum.calculateBox(expDenum, this.originPoint.y + (FontConstant.getHeight(this.style, "X")/2), 0);
+            if(overY>0){
+                expDenum.y = expDenum.y + overY;
+            }
+        }while(overY>0);
+
+
+        this.finalBounds.height =this.denum.finalBounds.y + this.denum.finalBounds.height - this.num.finalBounds.y;
+
+        if(this.num.finalBounds.width>this.denum.finalBounds.width){
+            this.finalBounds.width = this.num.finalBounds.width;
+        }else{
+            this.finalBounds.width = this.denum.finalBounds.width;
+        }
+
+
+        if(this.num.finalBounds.width<this.finalBounds.width){
+            this.num.addXToBox( (this.finalBounds.width-this.num.finalBounds.width)/2);
+        }
+        if(this.denum.finalBounds.width<this.finalBounds.width){
+            this.denum.addXToBox( (this.finalBounds.width-this.denum.finalBounds.width)/2);
+        }
+
+    }
+
+    public function addXToChildren(newX:Number){
+        this.num.addXToBox(newX);
+        this.denum.addXToBox(newX);
+    }
+
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+        this.num.inheritStyle(this.style);
+        this.denum.inheritStyle(this.style);
+    }
+
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+        this.num.overrideStyle(this.style);
+        this.denum.overrideStyle(this.style);
+    }
+
+}
+
+class RootBox extends Box{
+
+    var base:Box;
+    var index:Box;
+
+    var linethickness = 1;
+
+    public function RootBox(){
+        super();
+    }
+
+
+    public function draw(graph){
+        this.base.draw(graph);
+
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        var d = FontConstant.getHeight(newStyle, "X")/2;
+
+        graph.beginPath();
+        graph.lineStyle(this.linethickness, this.style.getHexColor(), 100);
+        graph.moveTo(this.base.finalBounds.x-d, this.base.finalBounds.y+ d);
+        graph.lineTo(this.base.finalBounds.x - (d/2), this.base.finalBounds.y + this.base.finalBounds.height);
+        graph.lineTo(this.base.finalBounds.x , this.finalBounds.y+d/2);
+        graph.lineTo(this.base.finalBounds.x + this.base.finalBounds.width , this.finalBounds.y+d/2);
+        graph.stroke();
+
+        this.index.drawBox(graph);
+    }
+
+    public function calculate(){
+        this.base.calculateBox(this.originPoint, this.topLimit, this.bottomLimit);
+
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        var d = FontConstant.getHeight(newStyle, "X")/2;
+
+        this.base.addXToBox(d);
+
+        this.finalBounds.width = this.base.finalBounds.width + d;
+        this.finalBounds.height  = this.base.finalBounds.height;
+
+        var expR = new Point();
+        expR.x = this.originPoint.x;
+        expR.y = this.base.finalBounds.y - FontConstant.getHeight(this.style, "X")/3;
+
+        this.index.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        var w = this.index.finalBounds.width-8;
+        this.base.addXToBox(w);
+
+        this.finalBounds.width = this.base.finalBounds.x+ this.base.finalBounds.width - this.index.finalBounds.x;
+        this.finalBounds.height = this.base.finalBounds.y+ this.base.finalBounds.height - this.index.finalBounds.y;
+        this.finalBounds.x = this.index.finalBounds.x;
+        this.finalBounds.y = this.index.finalBounds.y;
+    }
+
+    public function addXToChildren(addX:Number){
+        this.base.addXToBox(addX);
+        this.index.addXToBox(addX);
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+
+        this.base.inheritStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.index.inheritStyle(newStyle);
+    }
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+
+        this.base.overrideStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.index.overrideStyle(newStyle);
+    }
+
+}
+
+]]>
+</script>
+</library>

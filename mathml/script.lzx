@@ -1,0 +1,401 @@
+<!---
+Copyright (c) 2008 Eric Simmerman, Tempest Strings Enterprises, Inc. (tempeststrings.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<library>
+<script when='immediate'>
+<![CDATA[
+class UnderOverBox extends Box{
+
+    var base:Box;
+    var sub:Box;
+    var exp:Box;
+
+
+    public function draw(graph){
+        //trace("draw sup at " + bounds + " format " + size);
+        this.base.drawBox(graph);
+        this.exp.drawBox(graph);
+        this.sub.drawBox(graph);
+        //DrawFormula.drawRectangle(graph, this.finalBounds);
+    }
+
+    public function calculate(){
+        //trace("draw sup at " + bounds + " format " + size);
+        this.base.calculateBox(this.originPoint, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.height  = this.base.finalBounds.height;
+
+        var expR = new Point();
+        expR.x = this.originPoint.x;
+        expR.y = this.base.finalBounds.y - FontConstant.getHeight(this.exp.style, "X")/2;
+
+        this.exp.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        if(this.base.finalBounds.width>this.exp.finalBounds.width){
+            this.finalBounds.width = this.base.finalBounds.width;
+        }else{
+            this.finalBounds.width = this.exp.finalBounds.width;
+        }
+
+        this.finalBounds.height = this.finalBounds.y + this.finalBounds.height - this.exp.finalBounds.y;
+        this.finalBounds.y = this.exp.finalBounds.y;
+
+        expR = new Point();
+        expR.x = this.originPoint.x;
+        expR.y = this.originPoint.y + FontConstant.getAscent(this.base.style, "X");
+
+        this.sub.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        if(this.finalBounds.width<this.sub.finalBounds.width){
+            this.finalBounds.width = this.sub.finalBounds.width;
+        }
+        this.base.addXToBox((this.finalBounds.width-this.base.finalBounds.width)/2);
+        this.exp.addXToBox((this.finalBounds.width-this.exp.finalBounds.width)/2);
+        this.sub.addXToBox((this.finalBounds.width-this.sub.finalBounds.width)/2);
+
+        this.finalBounds.height = this.sub.finalBounds.y + this.sub.finalBounds.height - this.finalBounds.y;
+    }
+
+    public function addXToChildren(addX:Number){
+        this.base.addXToBox(addX);
+        this.exp.addXToBox(addX);
+        this.sub.addXToBox(addX);
+    }
+
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+
+        this.base.inheritStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-5;
+        this.sub.inheritStyle(newStyle);
+        this.exp.inheritStyle(newStyle);
+    }
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+
+        this.base.overrideStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-5;
+        this.sub.overrideStyle(newStyle);
+        this.exp.overrideStyle(newStyle);
+    }
+
+
+}
+
+class UnderBox extends Box{
+
+    var base:Box;
+    var sub:Box;
+
+
+    public function draw(graph){
+        //trace("draw sup at " + bounds + " format " + size);
+        this.base.drawBox(graph);
+        this.sub.drawBox(graph);
+        //DrawFormula.drawRectangle(graph, this.finalBounds);
+    }
+
+    public function calculate(){
+        this.base.calculateBox(this.originPoint, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.height  = this.base.finalBounds.height;
+
+        var expR = new Point();
+        expR.x = this.finalBounds.x;
+        expR.y = this.finalBounds.y + FontConstant.getAscent(this.base.style, "X");
+
+        this.sub.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        if(this.base.finalBounds.width>this.sub.finalBounds.width){
+            this.finalBounds.width = this.base.finalBounds.width;
+            this.sub.addXToBox((this.base.finalBounds.width-this.sub.finalBounds.width)/2);
+        }else{
+            this.finalBounds.width = this.sub.finalBounds.width;
+            this.base.addXToBox((this.sub.finalBounds.width-this.base.finalBounds.width)/2);
+        }
+        this.finalBounds.height = this.sub.finalBounds.y + this.sub.finalBounds.height - this.finalBounds.y;
+    }
+
+    public function addXToChildren(addX:Number){
+        this.base.addXToBox(addX);
+        this.sub.addXToBox(addX);
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+
+        this.base.inheritStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-5;
+        this.sub.inheritStyle(newStyle);
+    }
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+
+        this.base.overrideStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-5;
+        this.sub.overrideStyle(newStyle);
+    }
+
+
+}
+class SupBox extends Box{
+    var base:Box;
+    var exp:Box;
+
+
+    public function draw(graph){
+        this.base.drawBox(graph);
+        this.exp.drawBox(graph);
+        //DrawFormula.drawRectangle(graph, bounds);
+    }
+
+    public function calculate(){
+        this.base.calculateBox(this.originPoint, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.width = this.base.finalBounds.width;
+        this.finalBounds.height  = this.base.finalBounds.height;
+
+        var expR = new Point();
+        expR.x = this.originPoint.x + this.finalBounds.width;
+        expR.y = this.originPoint.y - FontConstant.getHeight(this.style, "X")/4;
+
+        this.exp.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.width = this.finalBounds.width + this.exp.finalBounds.width;
+        this.finalBounds.height = this.finalBounds.y + this.finalBounds.height - this.exp.finalBounds.y;
+        this.finalBounds.y = this.exp.finalBounds.y;
+    }
+
+    public function addXToChildren(addX:Number){
+        this.base.addXToBox(addX);
+        this.exp.addXToBox(addX);
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+
+        this.base.inheritStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.exp.inheritStyle(newStyle);
+    }
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+
+        this.base.overrideStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.exp.overrideStyle(newStyle);
+    }
+
+}
+class SubSupBox extends Box{
+
+    var base:Box;
+    var sub:Box;
+    var exp:Box;
+
+
+    public function draw(graph){
+        //trace("draw sup at " + bounds + " format " + size);
+        this.base.drawBox(graph);
+        this.exp.drawBox(graph);
+        this.sub.drawBox(graph);
+        //DrawFormula.drawRectangle(graph, bounds);
+    }
+
+    public function calculate(){
+        //trace("draw sup at " + bounds + " format " + size);
+        this.base.calculateBox(this.originPoint, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.width = this.base.finalBounds.width;
+        this.finalBounds.height  = this.base.finalBounds.height;
+
+        var expR = new Point();
+        expR.x = this.originPoint.x + this.finalBounds.width;
+        expR.y = this.originPoint.y - FontConstant.getHeight(this.base.style, "X")/4;
+
+        this.exp.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.height = this.finalBounds.y + this.finalBounds.height - this.exp.finalBounds.y;
+        this.finalBounds.y = this.exp.finalBounds.y;
+
+        expR = new Point();
+        expR.x = this.originPoint.x + this.base.finalBounds.width;
+        expR.y = this.originPoint.y + FontConstant.getHeight(this.base.style, "X")/2;
+
+        if(this.base instanceof IntOBox){
+            expR.x = expR.x - 2*this.base.finalBounds.width/3
+        }
+        this.sub.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        if((this.sub.finalBounds.x+this.sub.finalBounds.width)>(this.exp.finalBounds.x + this.exp.finalBounds.width)){
+            this.finalBounds.width = this.finalBounds.width + this.sub.finalBounds.width;
+        }else{
+            this.finalBounds.width = this.finalBounds.width + this.exp.finalBounds.width;
+        }
+        this.finalBounds.height = this.sub.finalBounds.y + this.sub.finalBounds.height - this.finalBounds.y;
+    }
+
+    public function addXToChildren(addX:Number){
+        this.base.addXToBox(addX);
+        this.exp.addXToBox(addX);
+        this.sub.addXToBox(addX);
+    }
+
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+
+        this.base.inheritStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.sub.inheritStyle(newStyle);
+        this.exp.inheritStyle(newStyle);
+    }
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+
+        this.base.overrideStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.sub.overrideStyle(newStyle);
+        this.exp.overrideStyle(newStyle);
+    }
+
+}
+class SubBox extends Box{
+
+    var base:Box;
+    var sub:Box;
+
+
+    public function draw(graph){
+        //trace("draw sup at " + bounds + " format " + size);
+        this.base.drawBox(graph);
+        this.sub.drawBox(graph);
+        //DrawFormula.drawRectangle(graph, bounds);
+    }
+
+    public function calculate(){
+        this.base.calculateBox(this.originPoint, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.width = this.base.finalBounds.width;
+        this.finalBounds.height  = this.base.finalBounds.height;
+
+        var expR = new Point();
+        expR.x = this.finalBounds.x + this.finalBounds.width;
+        expR.y = this.finalBounds.y + FontConstant.getHeight(this.style, "X")/2;
+
+        this.sub.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.width = this.finalBounds.width + this.sub.finalBounds.width;
+        this.finalBounds.height = this.sub.finalBounds.y + this.sub.finalBounds.height - this.finalBounds.y;
+    }
+
+    public function addXToChildren(addX:Number){
+        this.base.addXToBox(addX);
+        this.sub.addXToBox(addX);
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+
+        this.base.inheritStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.sub.inheritStyle(newStyle);
+    }
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+
+        this.base.overrideStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-3;
+        this.sub.overrideStyle(newStyle);
+    }
+
+}
+class OverBox extends Box{
+
+    var base:Box;
+    var exp:Box;
+
+
+    public function draw(graph){
+        this.base.drawBox(graph);
+        this.exp.drawBox(graph);
+        //DrawFormula.drawRectangle(graph, this.finalBounds);
+    }
+
+    public function calculate(){
+        this.base.calculateBox(this.originPoint, this.topLimit, this.bottomLimit);
+
+        this.finalBounds.height  = this.base.finalBounds.height;
+
+        var expR = new Point();
+        expR.x = this.originPoint.x;
+        expR.y = this.originPoint.y - FontConstant.getHeight(this.exp.style, "X")/2;
+
+        this.exp.calculateBox(expR, this.topLimit, this.bottomLimit);
+
+        if(this.base.finalBounds.width>this.exp.finalBounds.width){
+            this.finalBounds.width = this.base.finalBounds.width;
+            this.exp.addXToBox((this.base.finalBounds.width-this.exp.finalBounds.width)/2);
+        }else{
+            this.finalBounds.width = this.exp.finalBounds.width;
+            this.base.addXToBox((this.exp.finalBounds.width-this.base.finalBounds.width)/2);
+        }
+        this.finalBounds.height = this.finalBounds.y + this.finalBounds.height - this.exp.finalBounds.y;
+        this.finalBounds.y = this.exp.finalBounds.y;
+    }
+
+    public function addXToChildren(addX:Number){
+        this.base.addXToBox(addX);
+        this.exp.addXToBox(addX);
+    }
+
+    public function inheritStyle(_styleParent:Style){
+        super.inheritStyle(_styleParent);
+
+        this.base.inheritStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-5;
+        this.exp.inheritStyle(newStyle);
+    }
+    public function overrideStyle(_styleParent:Style){
+        super.overrideStyle(_styleParent);
+
+        this.base.overrideStyle(this.style);
+        var newStyle = this.style.getCopy();
+        newStyle.size = newStyle.size-5;
+        this.exp.overrideStyle(newStyle);
+    }
+
+}
+]]>
+</script>
+</library>

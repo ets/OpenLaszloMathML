@@ -1,0 +1,206 @@
+<!---
+This is file is used to showcase example renderings using the MathML library.
+-->
+<canvas width="800" height="600"   debug="true">
+<include href="mathml/mathmlview.lzx"/>
+
+<!-- From the Mozilla MathML stress tests....the library currently fails to render this test properly-->
+ <dataset name="failure">
+ <math>
+ <mrow>
+    <mrow>
+      <mo>(</mo>
+      <mfrac linethickness="0">
+        <mi>p</mi>
+        <mn>2</mn>
+      </mfrac>
+      <mo>)</mo>
+    </mrow>
+    <msup>
+      <mi>x</mi>
+      <mn>2</mn>
+    </msup>
+    <msup>
+      <mi>y</mi>
+      <mrow>
+        <mi>p</mi>
+        <mo>-</mo>
+        <mn>2</mn>
+      </mrow>
+    </msup>
+    <mo>-</mo>
+    <mfrac>
+      <mn>1</mn>
+      <mrow>
+        <mn>1</mn>
+        <mo>-</mo>
+        <mi>x</mi>
+      </mrow>
+    </mfrac>
+    <mfrac>
+      <mn>1</mn>
+      <mrow>
+        <mn>1</mn>
+        <mo>-</mo>
+        <msup>
+          <mi>x</mi>
+          <mn>2</mn>
+        </msup>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+</dataset>
+
+  <dataset name="example1">
+<math>
+<mrow><msqrt>
+    <mrow>
+        <msup>
+            <mn>2</mn>
+            <mrow>
+                <msup>
+                    <mi>x</mi>
+                    <mn>2</mn>
+                </msup>
+                <mo>+</mo>
+                <mrow>
+                    <mn>4</mn>
+                    <mi>x</mi>
+                </mrow>
+                <mo>+</mo>
+                <mn>4</mn>
+            </mrow>
+        </msup>
+        <mo>+</mo>
+        <mrow>
+            <mn>4</mn>
+            <mi>x</mi>
+        </mrow>
+        <mo>+</mo>
+        <mn>45</mn>
+    </mrow>
+</msqrt>
+<mo>+</mo><mroot linethickness="3"><mrow>
+    <msub>
+        <mi>log</mi>
+        <mn>2</mn>
+    </msub>
+</mrow>
+<mi>5</mi></mroot></mrow>
+</math>
+</dataset>
+
+  <dataset name="example2">
+<math>
+    <mrow>
+        <mo> ( </mo>
+        <mfrac linethickness="0" color="#006699">
+            <mi fontstyle="bold"> a + b +c </mi>
+            <mi color="#ff0000"> b </mi>
+        </mfrac>
+        <mo> ) </mo>
+    </mrow>
+    <mfrac linethickness="2" fontstyle="italic" >
+        <mrow><mi color="#00ff00">3456</mi><mo>+</mo><mfrac>
+            <mi> a </mi>
+            <mi fontsize="8"> b + c + d</mi>
+        </mfrac>
+        </mrow><mrow><mn>3</mn>
+    <mfrac color="#ffff00">
+            <mi> c + d </mi>
+            <mi color="#ff0000"> d </mi>
+        </mfrac>
+    </mrow> </mfrac>
+</math>
+</dataset>
+
+  <dataset name="example3">
+<math>
+    <msubsup>
+        <mo><![CDATA[&int;]]></mo><mn>2</mn><mn>56</mn>
+    </msubsup>
+    <msup>
+        <mi>x</mi>
+        <mn>2</mn>
+    </msup>
+    <mtext fontstyle='italic'>dx</mtext>
+<mo>+</mo>
+    <msubsup>
+        <mo><![CDATA[&int;]]></mo>
+        <mi>-<![CDATA[&infinity;]]></mi>
+        <mi><![CDATA[&infinity;]]></mi>
+    </msubsup>
+    <msup>
+        <mi>e</mi>
+        <mn>x</mn>
+    </msup>
+    <mtext fontstyle='italic'>dx</mtext>
+<mo>+</mo>
+    <munderover>
+        <mo><![CDATA[&prod;]]></mo>
+        <mrow>
+            <mi>x</mi>
+            <mo>=</mo>
+            <mn>0</mn>
+        </mrow>
+        <mn>56</mn>
+    </munderover>
+    <msup>
+        <mi>x</mi>
+        <mn>2</mn>
+    </msup>
+    <mo>+</mo>
+    <munderover>
+        <mo><![CDATA[&sum;]]></mo>
+        <mrow>
+            <mi>x</mi>
+            <mo>=</mo>
+            <mn>0</mn>
+        </mrow>
+        <mi><![CDATA[&infinity;]]></mi>
+    </munderover>
+    <msup>
+        <mi>x</mi>
+        <mn>2</mn>
+    </msup>
+    <mo>+</mo>
+    <munderover>
+        <mo><![CDATA[&sum;]]></mo>
+    <mrow><mi>x</mi><mo>=</mo><mn>1</mn></mrow>
+    <mi>n</mi>
+</munderover>
+<mrow>
+    <mi>x</mi>
+</mrow>
+<mo>+</mo>
+    <munder>
+        <mrow>
+            <mi>lim</mi>
+        </mrow>
+        <mrow>
+            <mi>x</mi>
+        <mo><![CDATA[&rarr;]]></mo>
+        <mn>0</mn>
+    </mrow>
+</munder>
+<mrow>
+    <mi>x</mi>
+</mrow>
+</math>
+</dataset>
+
+
+
+ <dataset name="example4">
+ <![CDATA[<math><msup><mi>X</mi><mrow><mo>(</mo><msqrt><mrow><mo>-1</mo></mrow></msqrt><mo>)</mo></mrow></msup></math>]]>
+</dataset>
+
+<!-- Simply change the datapath to render the desired formula from above -->
+
+   <mathmlview font="sans-serif" fontsize="16" fgcolor="#000000" id="math" x="10" y="50" width="800" height="500" >
+  		<datapath id="ddata" xpath="example4:/" pooling="true" />
+   </mathmlview>
+
+</canvas>
+

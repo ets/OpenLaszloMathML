@@ -1,0 +1,308 @@
+<!---
+Copyright (c) 2008 Eric Simmerman, Tempest Strings Enterprises, Inc. (tempeststrings.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<library>
+<script when='immediate'>
+<![CDATA[
+class Rectangle {
+  var x = null;
+  var y = null;
+  var width = null;
+  var height = null;
+  function Rectangle(x,y,w,h){this.x=x; this.y=y; this.width=w; this.height=h;}
+    public function toString():String{
+        return "Rectangle: x="+this.x+";y="+this.y+";width="+this.width+";height="+this.height;
+    }
+    function greatestX(){
+    	return this.x+this.width;
+    }
+}
+
+class Point {
+  var x = null;
+  var y = null;
+  function Point(x,y){this.x=x; this.y=y; }
+    public function toString():String{
+        return "Point: x="+this.x+";y="+this.y;
+    }
+}
+
+class Style {
+
+    var size:Number = null;
+    var color:String = null;
+    var font:String = null;
+    var fontstyle:String = null;
+
+    public function Style(){}
+
+    public function getCopy():Style{
+        var newStyle = new Style();
+        newStyle.font = this.font;
+        newStyle.size = this.size;
+        newStyle.color = this.color;
+        newStyle.fontstyle = this.fontstyle;
+        return newStyle;
+    }
+
+    public function toString():String{
+        return "Style: size="+this.size+";color="+this.color+";font="+this.font+";style="+this.fontstyle;
+    }
+
+    public function getHexColor():Number{
+        if(this.color==null) return 0;
+        return parseInt(this.color.substring(1), 16);
+    }
+}
+
+class Box{
+
+    //the final value of box bounds
+    var finalBounds:Rectangle = null;
+
+    // the original start point is the upper left corner for text
+    var originPoint:Point = null;
+
+    // has limits
+    var topLimit:Number = null;
+    var bottomLimit:Number = null;
+
+    // font size
+    var style:Style = null;
+
+    public function toString():String{
+        return "Box: finalBounds["+this.finalBounds.toString()+"] originPoint["+this.originPoint.toString()+"] topLimit="+this.topLimit+"; bottomLimit="+this.bottomLimit;
+    }
+
+    public function Box(){
+        this.finalBounds = new Rectangle();
+        this.originPoint = new Point();
+        //Debug.write("A Box has a new style instance");
+        this.style = new Style();
+    }
+
+    public function initBounds(_originPoint:Point){
+        this.finalBounds.x = _originPoint.x;
+        this.finalBounds.y = _originPoint.y;
+        this.finalBounds.width = 0;
+        this.finalBounds.height = 0;
+        this.originPoint.x = _originPoint.x;
+        this.originPoint.y = _originPoint.y;
+    }
+
+    public function addXToBox(addX:Number){
+        this.finalBounds.x = this.finalBounds.x + addX;
+        this.originPoint.x = this.originPoint.x + addX;
+        this.addXToChildren(addX);
+    }
+
+    public function addXToChildren(addX:Number){
+    }
+
+    public function drawBox(graph){
+        this.draw(graph);
+    }
+
+    public function calculateBox(_originPoint:Point, _topLimit:Number, _bottomLimit:Number):Number{
+        this.initBounds(_originPoint);
+        this.topLimit = _topLimit;
+        this.bottomLimit = _bottomLimit;
+
+        this.calculate();
+
+        if(this.bottomLimit!=0){
+            if((this.finalBounds.y+this.finalBounds.height)>this.bottomLimit){
+                return ((this.finalBounds.y+this.finalBounds.height) - this.bottomLimit);
+            }
+        }
+        if(this.topLimit!=0){
+            if(this.finalBounds.y<this.topLimit){
+                return this.topLimit - this.finalBounds.y;
+            }
+        }
+
+        return 0;
+    }
+
+    public function draw(graph){
+        //Debug.write("draw Box !!!!!");
+    }
+
+    // return +/-  extras when the limit is overpassed
+    // only same type of boxes will recalculate
+    public function calculate(){
+        //Debug.write("calculate Box !!!!!");
+    }
+
+    //Inherit any attributes of the given style that have not been explicitly set
+    public function inheritStyle(_styleParent:Style){
+        if(_styleParent != null){
+            if(this.style.font == null){
+                this.style.font = _styleParent.font;
+            }
+            if(this.style.size==null){
+                this.style.size = _styleParent.size;
+            }
+            if(this.style.color==null){
+                this.style.color = _styleParent.color;
+            }
+            if(this.style.fontstyle==null){
+                this.style.fontstyle = _styleParent.fontstyle;
+            }
+        }
+    }
+
+    public function overrideStyle(_styleParent:Style){
+        if(_styleParent != null){
+            if(_styleParent.font != null){
+                this.style.font = _styleParent.font;
+            }
+            if(_styleParent.size!=null){
+                this.style.size = _styleParent.size;
+            }
+            if(_styleParent.color!=null){
+                this.style.color = _styleParent.color;
+            }
+            if(_styleParent.fontstyle!=null){
+                this.style.fontstyle = _styleParent.fontstyle;
+            }
+        }
+    }
+
+
+    public function getHexColor():Number{
+        return parseInt(this.style.color.substring(1), 16);
+    }
+
+}
+
+class DrawFormula{
+
+    static function draw(graph, parentBox:Box, origin:Point, style:Style):Rectangle{
+        //Debug.write("Received draw message");
+
+        parentBox.inheritStyle(style);
+        parentBox.calculateBox(origin, 0, 0);
+        parentBox.draw(graph);
+
+        //Debug.write("Returning newBounds from parentBox.");
+        var newBounds:Rectangle =  new Rectangle();
+        newBounds.x = parentBox.finalBounds.x;
+        newBounds.y = parentBox.finalBounds.y;
+        newBounds.width = parentBox.finalBounds.width;
+        newBounds.height = parentBox.finalBounds.height;
+        return newBounds;
+    }
+
+    static function createText(graph, startPoint:Point, text:String, style:Style){
+//      Debug.write("Attempting to write text '"+text+"' "+startPoint.x+","+startPoint.y+" with "+style.toString());
+            var textView = new LzText(graph, {x:startPoint.x, y:startPoint.y, text:text, font:style.font, fontsize:style.size, fontstyle:style.fontstyle, resize:true});
+            textView.setColor(style.getHexColor());
+    }
+
+    static function calculateText(bounds:Rectangle, text:String, style:Style){
+            //One-off way of estimating width and height
+            //bounds.width = FontConstant.getWidth(style, text) ;
+            //bounds.height = FontConstant.getHeight(style, text);
+
+            //More accurate but expensive way
+            var textView = new LzText(null, {text:text, font:style.font, fontsize:style.size, fontstyle:style.fontstyle, visible:false});
+            //Debug.write("Observed width of "+text+" as "+textView.getTextWidth());
+            bounds.width = textView.getTextWidth();
+            bounds.height = textView.getTextHeight();
+            textView.destroy();
+    }
+
+    static function drawRectangle(graph, bounds:Rectangle){
+        graph.beginPath();
+        graph.lineStyle(1, 0x000000, 100);
+        graph.moveTo(bounds.x, bounds.y);
+        graph.lineTo(bounds.x + bounds.width, bounds.y);
+        graph.lineTo(bounds.x + bounds.width, bounds.y + bounds.height);
+        graph.lineTo(bounds.x, bounds.y + bounds.height);
+        graph.lineTo(bounds.x, bounds.y);
+        graph.stroke();
+    }
+}
+
+class FontConstant{
+
+    static var fontSize = null;
+    static var startWidthSize:Number = 7;
+    static var fontSizeFactor = 1.05;
+
+    static function init(){
+        //Font size estimation hack
+        if(FontConstant.fontSize==null){
+            FontConstant.fontSize = new Array();
+            FontConstant.fontSize[0] = FontConstant.startWidthSize;
+
+            for(var i=1;i<40; i++){
+                FontConstant.fontSize[i]= FontConstant.fontSize[i-1]*FontConstant.fontSizeFactor;
+                FontConstant.fontSize[i-1] = parseInt(FontConstant.fontSize[i-1]);
+                //Debug.write(i + " - " + FontConstant.fontSize[i-1]);
+            }
+            FontConstant.fontSize[FontConstant.fontSize.length-1] = parseInt(FontConstant.fontSize[FontConstant.fontSize.length-1]);
+            //Debug.write("Inside FontConstant.init where fontSizes number "+this.fontSize.length);
+        }
+    }
+
+    static function getTextFormat(style:Style):TextFormat{
+        FontConstant.init();
+        var tf = new TextFormat();
+        tf.font=style.font; // _sans; _serif; _typewriter
+        if(style.fontstyle=='bold'){
+            tf.bold = true;
+        }
+        if(style.fontstyle=='italic'){
+            tf.italic = true;
+        }
+        tf.color = style.getHexColor();
+        tf.size = FontConstant.fontSize[style.size];
+        return tf;
+    }
+
+    static function getWidth(style:Style, text:String):Number{
+        //FontConstant.init();
+        //return FontConstant.getTextFormat(style).getTextExtent(text).textFieldWidth;
+        var textView = new LzText(null, {text:text, font:style.font, fontsize:style.size, fontstyle:style.fontstyle, visible:false});
+        var width = textView.getTextWidth();
+        textView.destroy();
+        return width;
+    }
+    static function getHeight(style:Style, text:String):Number{
+        //FontConstant.init();
+        //return FontConstant.getTextFormat(style).getTextExtent(text).textFieldHeight;
+        var textView = new LzText(null, {text:text, font:style.font, fontsize:style.size, fontstyle:style.fontstyle, visible:false});
+        var height = textView.getTextHeight();
+        textView.destroy();
+        return height;
+    }
+
+    static function getAscent(style:Style, text:String):Number{
+        FontConstant.init();
+        return FontConstant.getTextFormat(style).getTextExtent(text).ascent;
+    }
+
+}
+]]>
+</script>
+</library>
